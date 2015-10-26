@@ -18,7 +18,7 @@ handlers:
         level: INFO
         formatter: simple
         when: D
-        backupCount: 1
+        backupCount: 10
         filename: ./mango.log
 
 root:
