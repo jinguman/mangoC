@@ -12,7 +12,8 @@ from string_utils import StringUtils
 
 # default logger
 logger = logging.getLogger('mangoC.InsertPacket')
-INS_PACKET_LOG_PRINT_COUNT_THRESHOLD = 1
+INS_PACKET_LOG_PRINT_COUNT_THRESHOLD = 500
+
 
 class InsertPacket(threading.Thread):
 
@@ -67,6 +68,16 @@ class InsertPacket(threading.Thread):
         collection_name_list.append(location_name)
         collection_name = str(''.join(collection_name_list))
 
+        collection_name_list2 = []
+        collection_name_list2.append(network_name)
+        collection_name_list2.append("_")
+        collection_name_list2.append(station_name)
+        collection_name_list2.append("_")
+        collection_name_list2.append(location_name)
+        collection_name_list2.append("_")
+        collection_name_list2.append(channel_name)
+        collection_name2 = str(''.join(collection_name_list2))
+
         # make key
         str_yyyy_mm_dd_hh_mm_ss = '{0:04d}'.format(start_time._getYear()) + "-" + '{0:02d}'.format(start_time._getMonth()) + "-" + '{0:02d}'.format(start_time._getDay()) + "T" + '{0:02d}'.format(start_time._getHour()) + ':' + '{0:02d}'.format(start_time._getMinute()) + ':' + '{0:02d}'.format(start_time._getSecond())
 
@@ -87,11 +98,17 @@ class InsertPacket(threading.Thread):
         self._col = self._db[collection_name]
 
         try:
-            self._col.update(key, {'$set':{channel_name:data}}, upsert=True,multi=False)
+            self._col.update(key, {'$set': {channel_name:data}}, upsert=True,multi=False)
+
+            # make stats collection
+            stat_key = {}
+            stat_key['_id'] = collection_name2
+            stat_collection = self._db['TRACE_STATS']
+            stat_collection.update(stat_key, {"et": data['et']}, upsert=True, multi=False)
 
             # make index
-            self._col.ensure_index(channel_name + ".st")
-            self._col.ensure_index(channel_name + ".et")
+            self._col.ensure_index(channel_name + ".st", background=True)
+            self._col.ensure_index(channel_name + ".et", background=True)
 
             self._print_cnt += 1
             if self._print_cnt > INS_PACKET_LOG_PRINT_COUNT_THRESHOLD:
